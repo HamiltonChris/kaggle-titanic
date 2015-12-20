@@ -1,0 +1,7 @@
+# gitignore for titanic kaggle challenge
+
+# ignore all compile files
+*.pyc
+
+# ignore all data files
+*.csv
