@@ -1,3 +1,3 @@
 # Titanic kaggle challenge
 
-This repo is for trying out the kaggle titanic challenge. As according to the rules this should not be made public or shared with anyone else (even though it doesn't really matter).
+This repo contains python solutions to the titanic kaggle problem. More information and the dataset can be found at https://www.kaggle.com/c/titanic .
