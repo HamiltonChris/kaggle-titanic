@@ -7,15 +7,19 @@ from sklearn import cross_validation
 
 def format_data():
     titanic = pandas.read_csv("../data/train.csv")
-
-#print(titanic.describe())
+    titanic_test = pandas.read_csv("../data/test.csv")
 
 # fill the empty values in the age column
     titanic["Age"] = titanic["Age"].fillna(titanic["Age"].median())
 
+    titanic_test["Age"] = titanic_test["Age"].fillna(titanic["Age"].median())
+
 # encode sex values
     titanic.loc[titanic["Sex"] == "male", "Sex"] = 0
     titanic.loc[titanic["Sex"] == "female", "Sex"] = 1
+
+    titanic_test.loc[titanic_test["Sex"] == "male", "Sex"] = 0
+    titanic_test.loc[titanic_test["Sex"] == "female", "Sex"] = 0
 
 #print(titanic["Embarked"].unique())
 # fill empty embarked values and encode them with numbers
@@ -24,9 +28,17 @@ def format_data():
     titanic.loc[titanic["Embarked"] == "C", "Embarked"] = 1
     titanic.loc[titanic["Embarked"] == "Q", "Embarked"] = 2
 
+    titanic_test["Embarked"] = titanic_test["Embarked"].fillna("S")
+    titanic_test.loc[titanic_test["Embarked"] == "S", "Embarked"] = 0
+    titanic_test.loc[titanic_test["Embarked"] == "C", "Embarked"] = 1
+    titanic_test.loc[titanic_test["Embarked"] == "Q", "Embarked"] = 2
+
+# fill missing fare values in the test data
+    titanic_test["Fare"] = titanic_test["Fare"].fillna(titanic_test["Fare"].median())
+
     predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"] 
     target = ["Survived"]
-    return titanic, predictors,target
+    return titanic, predictors,target, titanic_test
 
 def linear_reg(dataset, features, target):
     alg = LinearRegression()
@@ -40,12 +52,13 @@ def linear_reg(dataset, features, target):
         test_predictions = alg.predict(dataset[features].iloc[test,:])
         predictions.append(test_predictions) 
 
-    return predictions
+    return predictions, alg
+
 
 def log_reg(dataset, features, target):
     alg = LogisticRegression()
     scores = cross_validation.cross_val_score(alg, dataset[features],dataset[target[0]], cv=3)
-    return scores.mean()
+    return scores.mean(), alg
 
 def check_error(predictions, dataset, target):
     predictions = np.concatenate(predictions, axis=0)
@@ -54,3 +67,16 @@ def check_error(predictions, dataset, target):
     predictions[predictions <=.5] = 0
     accuracy = sum(predictions[predictions == dataset[target]]) / len(predictions)
     return accuracy
+
+def test_prediction(training_dataset, test_dataset, alg, predictors, target):
+    alg.fit(training_dataset[predictors], training_dataset[target[0]])
+    predictions = alg.predict(test_dataset[predictors]) 
+    
+    return predictions
+
+def submit(test_set, predictions):
+    submission = pandas.DataFrame({
+        "PassengerId": test_set["PassengerId"],
+        "Survived": predictions
+    })
+    submission.to_csv("kaggle.csv", index=False)
