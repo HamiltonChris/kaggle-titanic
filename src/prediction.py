@@ -1,10 +1,18 @@
 import pandas
 import numpy as np
+import re
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import KFold
 from sklearn import cross_validation
+
+# extracts a title if any from name
+def get_title(name):
+    title_search = re.search(' ([A-Za-z]+)\.', name)
+    if title_search:
+        return title_search.group(1)
+    return ""
 
 def format_data():
     titanic = pandas.read_csv("../data/train.csv")
@@ -41,9 +49,22 @@ def format_data():
     titanic["FamilySize"] = titanic["Sibsp"] + titanic["Parch"]
     titanic_test["FamilySize"] = titanic_test["Sibsp"] + titanic_test["Parch"]
     
+# create new feature "NameLength"
+    titanic["NameLength"] = titanic["Name"].apply(lambda x: len(x))
+    titanic_test["NameLength"] = titanic_test["Name"].apply(lambda x: len(x)) 
 
+# retrieve titles from "Name" and create feature "Title"
+    title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Dr": 5, "Rev": 6, "Major": 7, "Col": 7, "Mlle": 8, "Mme": 8, "Don": 9, "Lady": 10, "Countess": 10, "Jonkheer": 10, "Sir": 9, "Capt": 7, "Ms": 2}
 
-    predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"] 
+    titanic["Title"] = titanic["Name"].apply(get_title)
+    titanic_test["Title"] = titanic_test["Name"].apply(get_title)
+
+    for k,v in title_mapping.items():
+        titanic.loc[titanic["Title"] = k] = v
+        titanic_test.loc[titanic_test["Title"] = k] = v
+
+    
+    predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked","FamilySize","NameLength","Title"] 
     target = ["Survived"]
     return titanic, predictors,target, titanic_test
 
