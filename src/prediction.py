@@ -2,6 +2,7 @@ import pandas
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import KFold
 from sklearn import cross_validation
 
@@ -36,6 +37,12 @@ def format_data():
 # fill missing fare values in the test data
     titanic_test["Fare"] = titanic_test["Fare"].fillna(titanic_test["Fare"].median())
 
+# create new feature "familysize"
+    titanic["FamilySize"] = titanic["Sibsp"] + titanic["Parch"]
+    titanic_test["FamilySize"] = titanic_test["Sibsp"] + titanic_test["Parch"]
+    
+
+
     predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"] 
     target = ["Survived"]
     return titanic, predictors,target, titanic_test
@@ -59,6 +66,11 @@ def log_reg(dataset, features, target):
     alg = LogisticRegression()
     scores = cross_validation.cross_val_score(alg, dataset[features],dataset[target[0]], cv=3)
     return scores.mean(), alg
+
+def random_forest(dataset, features, target):
+   alg = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2) 
+   scores = cross_validation.cross_val_score(alg, dataset[features], dataset[target[0]], cv=3)
+   return scores.mean(), alg
 
 def check_error(predictions, dataset, target):
     predictions = np.concatenate(predictions, axis=0)
