@@ -5,7 +5,7 @@ import operator
 import matplotlib.pyplot as plt
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.cross_validation import KFold
 from sklearn import cross_validation
 
@@ -124,6 +124,30 @@ def random_forest(dataset, features, target):
    alg = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2) 
    scores = cross_validation.cross_val_score(alg, dataset[features], dataset[target[0]], cv=3)
    return scores.mean(), alg
+
+def ensemble(dataset):
+    algorithms = [
+        [GradientBoostingClassifier(random_state=1, n_estimators=25, max_depth=3), ["Pclass", "Sex", "Age", "Fare", "Embarked", "FamilySize", "Title", "FamilyId"]],
+        [LogisticRegression(random_state=1), ["Pclass", "Sex", "Fare", "FamilySize", "Title", "Age", "Embarked"]]
+    ]
+    kf = KFold(dataset.shape[0], n_folds=3, random_state=1)
+    predictions = []
+    for train, test in kf:
+        train_target = dataset["Survived"].iloc[train]
+        full_test_predictions = []
+        for alg, predictors in algorithms:
+            alg.fit(dataset[predictors].iloc[train,:], train_target)
+            test_predictions = alg.predict_proba(dataset[predictors].iloc[test,:].astype(float))[:,1]
+            full_test_predictions.append(test_predictions)
+
+        test_predictions = (full_test_predictions[0] + full_test_predictions[1]) / 2
+        test_predictions[test_predictions <= .5] = 0
+        test_predictions[test_predictions > .5] = 1
+        predictions.append(test_predictions)
+    predictions = np.concatenate(predictions,axis=0)
+
+    accuracy = sum(predictions[predictions == dataset["Survived"]]) / len(predictions)
+    print(accuracy)
 
 def check_error(predictions, dataset, target):
     predictions = np.concatenate(predictions, axis=0)
