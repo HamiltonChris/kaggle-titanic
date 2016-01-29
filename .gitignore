@@ -5,3 +5,6 @@
 
 # ignore all data files
 *.csv
+
+# ignore all swap files
+*.swp

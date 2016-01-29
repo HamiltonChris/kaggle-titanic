@@ -1,11 +1,15 @@
 import pandas
 import numpy as np
 import re
+import operator
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import KFold
 from sklearn import cross_validation
+
+
+family_id_mapping = {}
 
 # extracts a title if any from name
 def get_title(name):
@@ -13,6 +17,17 @@ def get_title(name):
     if title_search:
         return title_search.group(1)
     return ""
+
+def get_family_id(row):
+    last_name = row["Name"].split(",")[0]
+    family_id = "{0}{1}".format(last_name, row["FamilySize"])
+    if family_id not in family_id_mapping:
+        if len(family_id_mapping) == 0:
+            current_id = 1
+        else:
+            current_id = (max(family_id_mapping.items(), key=operator.itemgetter(1))[1] + 1)
+        family_id_mapping[family_id] = current_id
+    return family_id_mapping[family_id]
 
 def format_data():
     titanic = pandas.read_csv("../data/train.csv")
@@ -46,8 +61,9 @@ def format_data():
     titanic_test["Fare"] = titanic_test["Fare"].fillna(titanic_test["Fare"].median())
 
 # create new feature "familysize"
-    titanic["FamilySize"] = titanic["Sibsp"] + titanic["Parch"]
-    titanic_test["FamilySize"] = titanic_test["Sibsp"] + titanic_test["Parch"]
+    titanic["FamilySize"] = titanic["SibSp"] + titanic["Parch"]
+    titanic_test["FamilySize"] = titanic_test["SibSp"] + titanic_test["Parch"]
+
     
 # create new feature "NameLength"
     titanic["NameLength"] = titanic["Name"].apply(lambda x: len(x))
@@ -56,13 +72,17 @@ def format_data():
 # retrieve titles from "Name" and create feature "Title"
     title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Dr": 5, "Rev": 6, "Major": 7, "Col": 7, "Mlle": 8, "Mme": 8, "Don": 9, "Lady": 10, "Countess": 10, "Jonkheer": 10, "Sir": 9, "Capt": 7, "Ms": 2}
 
-    titanic["Title"] = titanic["Name"].apply(get_title)
-    titanic_test["Title"] = titanic_test["Name"].apply(get_title)
+    titles = titanic["Name"].apply(get_title)
+    titles_test = titanic_test["Name"].apply(get_title)
 
     for k,v in title_mapping.items():
-        titanic.loc[titanic["Title"] = k] = v
-        titanic_test.loc[titanic_test["Title"] = k] = v
+        titles[titles == k] = v
+        titles_test[titles_test == k] = v
 
+# family groups
+    family_ids = titanic.apply(get_family_id, axis=1)
+    family_ids[titanic["FamilySize"] < 3] = -1
+    titanic["FamilyId"] = family_ids 
     
     predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked","FamilySize","NameLength","Title"] 
     target = ["Survived"]
