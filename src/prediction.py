@@ -2,8 +2,9 @@ import pandas
 import numpy as np
 import re
 import operator
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import LogisticRegression
+import matplotlib.pyplot as plt
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import KFold
 from sklearn import cross_validation
@@ -79,14 +80,25 @@ def format_data():
         titles[titles == k] = v
         titles_test[titles_test == k] = v
 
+    titanic["Title"] = titles
+    titanic_test["Title"] = titles_test
+
 # family groups
     family_ids = titanic.apply(get_family_id, axis=1)
     family_ids[titanic["FamilySize"] < 3] = -1
     titanic["FamilyId"] = family_ids 
     
-    predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked","FamilySize","NameLength","Title"] 
+    predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked","FamilySize","NameLength","Title", "FamilyId"] 
     target = ["Survived"]
     return titanic, predictors,target, titanic_test
+
+def find_features(dataset, features, target):
+    selector = SelectKBest(f_classif, k=5)
+    selector.fit(dataset[features], dataset[target[0]])
+    scores = -np.log10(selector.pvalues_)
+    plt.bar(range(len(features)),scores)
+    plt.xticks(range(len(features)), features, rotation='vertical')
+    plt.show()
 
 def linear_reg(dataset, features, target):
     alg = LinearRegression()
