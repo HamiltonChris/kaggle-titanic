@@ -71,7 +71,7 @@ def format_data():
     titanic_test["NameLength"] = titanic_test["Name"].apply(lambda x: len(x)) 
 
 # retrieve titles from "Name" and create feature "Title"
-    title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Dr": 5, "Rev": 6, "Major": 7, "Col": 7, "Mlle": 8, "Mme": 8, "Don": 9, "Lady": 10, "Countess": 10, "Jonkheer": 10, "Sir": 9, "Capt": 7, "Ms": 2}
+    title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Dr": 5, "Rev": 6, "Major": 7, "Col": 7, "Mlle": 8, "Mme": 8, "Don": 9, "Lady": 10, "Countess": 10, "Jonkheer": 10, "Sir": 9, "Capt": 7, "Ms": 2, "Dona":10}
 
     titles = titanic["Name"].apply(get_title)
     titles_test = titanic_test["Name"].apply(get_title)
@@ -85,8 +85,13 @@ def format_data():
 
 # family groups
     family_ids = titanic.apply(get_family_id, axis=1)
+    family_ids_test = titanic_test.apply(get_family_id, axis=1)
+
     family_ids[titanic["FamilySize"] < 3] = -1
+    family_ids_test[titanic_test["FamilySize"] < 3] = -1
+
     titanic["FamilyId"] = family_ids 
+    titanic_test["FamilyId"] = family_ids_test
     
     predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked","FamilySize","NameLength","Title", "FamilyId"] 
     target = ["Survived"]
@@ -148,6 +153,31 @@ def ensemble(dataset):
 
     accuracy = sum(predictions[predictions == dataset["Survived"]]) / len(predictions)
     print(accuracy)
+
+def ensemble_test(dataset,dataset_test,predictors,target): 
+    algorithms = [
+        [GradientBoostingClassifier(random_state=1, n_estimators=25, max_depth=3), predictors],
+        [LogisticRegression(random_state=1), predictors]
+    ]
+    full_predictions = []
+
+    for alg, predictors in algorithms:
+        alg.fit(dataset[predictors], dataset[target[0]])
+        predictions = alg.predict_proba(dataset_test[predictors].astype(float))[:,1]
+        full_predictions.append(predictions)
+
+    predictions = (full_predictions[0] * 3 + full_predictions[1]) / 4
+
+    predictions[predictions <= .5] = 0
+    predictions[predictions > .5] = 1
+    predictions = predictions.astype(int)
+
+    submission = pandas.DataFrame({
+        "PassengerId": dataset_test["PassengerId"],
+        "Survived": predictions
+    })
+
+    submission.to_csv("kaggle.csv", index=False)
 
 def check_error(predictions, dataset, target):
     predictions = np.concatenate(predictions, axis=0)
